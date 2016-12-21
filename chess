@@ -1,0 +1,86 @@
+#!/bin/bash
+
+COLOR_W="\033[0;32m"
+COLOR_B="\033[0;31m"
+COLOR_BG="\033[0;34m"
+COLOR_NONE="\033[0;0m"
+
+W_KING="${COLOR_W}♔${COLOR_BG}"
+W_QUEEN="${COLOR_W}♕${COLOR_BG}"
+W_ROOK="${COLOR_W}♖${COLOR_BG}"
+W_BISHOP="${COLOR_W}♗${COLOR_BG}"
+W_KNIGHT="${COLOR_W}♘${COLOR_BG}"
+W_PAWN="${COLOR_W}♙${COLOR_BG}"
+
+B_KING="${COLOR_B}♔${COLOR_BG}"
+B_QUEEN="${COLOR_B}♕${COLOR_BG}"
+B_ROOK="${COLOR_B}♖${COLOR_BG}"
+B_BISHOP="${COLOR_B}♗${COLOR_BG}"
+B_KNIGHT="${COLOR_B}♘${COLOR_BG}"
+B_PAWN="${COLOR_B}♙${COLOR_BG}"
+
+MOVES=""
+POSITION="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
+printBoard() {
+	array=($*)
+	board=(${array[0]//\// })
+	player=${array[1]}
+	move=${array[5]}
+	echo -e -n "$COLOR_BG"
+	echo -e "    a   b   c   d   e   f   g   h"
+	echo -e "  ┌───┬───┬───┬───┬───┬───┬───┬───┐"
+	i="0";
+	for row in ${board[@]}; do
+		if [ $i -gt 0 ]; then
+			echo -e "  ├───┼───┼───┼───┼───┼───┼───┼───┤"
+		fi
+		line="│"
+		for ((j=0; j<8; j++)); do
+			item=${row:$j:1}
+			case $item in
+				"1") line="$line   │";;
+				"2") line="$line   │   │";;
+				"3") line="$line   │   │   │";;
+				"4") line="$line   │   │   │   │";;
+				"5") line="$line   │   │   │   │   │";;
+				"6") line="$line   │   │   │   │   │   │";;
+				"7") line="$line   │   │   │   │   │   │   │";;
+				"8") line="$line   │   │   │   │   │   │   │   │";;
+				"K") line="$line $W_KING │";;
+				"Q") line="$line $W_QUEEN │";;
+				"R") line="$line $W_ROOK │";;
+				"B") line="$line $W_BISHOP │";;
+				"N") line="$line $W_KNIGHT │";;
+				"P") line="$line $W_PAWN │";;
+				"k") line="$line $B_KING │";;
+				"q") line="$line $B_QUEEN │";;
+				"r") line="$line $B_ROOK │";;
+				"b") line="$line $B_BISHOP │";;
+				"n") line="$line $B_KNIGHT │";;
+				"p") line="$line $B_PAWN │";;
+			esac
+		done
+		((num = 8 - $i))
+		suffix=""
+		case $i in
+			"3")
+				if [ $player == "w" ]; then
+					suffix="  ${COLOR_W}White's turn${COLOR_BG}";
+				else
+					suffix="  ${COLOR_B}Black's turn${COLOR_BG}";
+				fi
+				;;
+			"4")
+				suffix="  Move #$move"
+				;;
+		esac
+		echo -e "$num $line $num $suffix"
+		((i++))
+	done
+	echo -e "  └───┴───┴───┴───┴───┴───┴───┴───┘"
+	echo -e "    a   b   c   d   e   f   g   h"
+	echo -e -n "$COLOR_NONE"
+}
+
+printBoard $POSITION
