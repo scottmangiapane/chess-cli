@@ -1,9 +1,24 @@
 #!/bin/bash
 
+ENGINE=/Users/scottmangiapane/tmp/stockfish
+# ENGINE=./test
+
 COLOR_W="\033[0;32m"
 COLOR_B="\033[0;31m"
 COLOR_BG="\033[0;34m"
 COLOR_NONE="\033[0;0m"
+
+# COLOR_W=""
+# COLOR_B=""
+# COLOR_BG=""
+# COLOR_NONE=""
+
+# W_KING="${COLOR_W}♚${COLOR_BG}"
+# W_QUEEN="${COLOR_W}♛${COLOR_BG}"
+# W_ROOK="${COLOR_W}♜${COLOR_BG}"
+# W_BISHOP="${COLOR_W}♝${COLOR_BG}"
+# W_KNIGHT="${COLOR_W}♞${COLOR_BG}"
+# W_PAWN="${COLOR_W}♟${COLOR_BG}"
 
 W_KING="${COLOR_W}♔${COLOR_BG}"
 W_QUEEN="${COLOR_W}♕${COLOR_BG}"
@@ -83,4 +98,29 @@ printBoard() {
 	echo -e -n "$COLOR_NONE"
 }
 
+pipeIn=/tmp/chess_input
+rm -f $pipeIn
+if [[ ! -p $pipeIn ]]; then
+    mkfifo $pipeIn
+fi
+pipeOut=/tmp/chess_output
+rm -f $pipeOut
+if [[ ! -p $pipeOut ]]; then
+    mkfifo $pipeOut
+fi
+exec 9<> $pipeIn
+
+$ENGINE <$pipeIn >$pipeOut &
+
+echo "position fen $POSITION" > $pipeIn
 printBoard $POSITION
+
+echo "go depth 5" > $pipeIn
+
+while read line <$pipeOut; do
+	if [[ $line == bestmove* ]]; then
+		echo "[$line]"
+	else
+		echo "![$line]"
+	fi
+done
