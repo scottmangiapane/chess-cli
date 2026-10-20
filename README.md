@@ -1,3 +1,4 @@
 ## Stockfish Client
 
-A command-line based GUI for the [Stockfish](https://stockfishchess.org) chess engine.
+A command-line client for the [Stockfish](https://stockfishchess.org) chess engine.
+
