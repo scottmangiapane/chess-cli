@@ -46,7 +46,7 @@ func ResolveStockfishPath(path string) (string, error) {
 	resolved, err := exec.LookPath(path)
 	if err != nil {
 		if path == DefaultStockfishName {
-			return "", errors.New("Stockfish was not found on PATH; install it or specify its executable with -stockfish or STOCKFISH_PATH")
+			return "", errors.New("Stockfish was not found on PATH; install it or specify its executable with -stockfish")
 		}
 		return "", fmt.Errorf("Stockfish executable %q was not found or is not executable: %w", path, err)
 	}

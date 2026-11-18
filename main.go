@@ -18,55 +18,36 @@ type Config struct {
 	Threads       int
 	HashMB        int
 	NoColor       bool
-}
-
-func positiveEnv(name string, fallback int) (int, error) {
-	value := strings.TrimSpace(os.Getenv(name))
-	if value == "" {
-		return fallback, nil
-	}
-
-	n, err := strconv.Atoi(value)
-	if err != nil || n < 1 {
-		return 0, fmt.Errorf("%s must be a positive integer", name)
-	}
-	return n, nil
+	Theme         string
+	Pieces        string
 }
 
 func parseConfig(args []string) (Config, error) {
 	config := Config{
-		StockfishPath: strings.TrimSpace(os.Getenv("STOCKFISH_PATH")),
-		NoColor:       os.Getenv("NO_COLOR") != "",
-	}
-	if config.StockfishPath == "" {
-		config.StockfishPath = DefaultStockfishName
-	}
-
-	var depthEnvErr, threadsEnvErr, hashEnvErr error
-	if config.Depth, depthEnvErr = positiveEnv("DEPTH", 8); depthEnvErr != nil {
-		config.Depth = 8
-	}
-	if config.Threads, threadsEnvErr = positiveEnv("THREADS", runtime.NumCPU()); threadsEnvErr != nil {
-		config.Threads = runtime.NumCPU()
-	}
-	if config.HashMB, hashEnvErr = positiveEnv("HASH_MB", 256); hashEnvErr != nil {
-		config.HashMB = 256
+		StockfishPath: DefaultStockfishName,
+		Depth:         8,
+		Threads:       runtime.NumCPU(),
+		HashMB:        256,
+		Theme:         "classic",
+		Pieces:        "unicode",
 	}
 
 	flags := flag.NewFlagSet("chess-cli", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	flags.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage: chess-cli [options]")
-		fmt.Fprintln(os.Stderr, "Options (environment variables provide defaults):")
+		fmt.Fprintln(os.Stderr, "Options:")
 		flags.VisitAll(func(option *flag.Flag) {
 			fmt.Fprintf(os.Stderr, "  -%s (default %s): %s\n", option.Name, option.DefValue, option.Usage)
 		})
 	}
-	flags.StringVar(&config.StockfishPath, "stockfish", config.StockfishPath, "Stockfish executable path (STOCKFISH_PATH)")
-	flags.IntVar(&config.Depth, "depth", config.Depth, "search depth (DEPTH)")
-	flags.IntVar(&config.Threads, "threads", config.Threads, "Stockfish threads (THREADS)")
-	flags.IntVar(&config.HashMB, "hash-mb", config.HashMB, "Stockfish hash size in MB (HASH_MB)")
-	flags.BoolVar(&config.NoColor, "no-color", config.NoColor, "disable terminal colors (NO_COLOR)")
+	flags.StringVar(&config.StockfishPath, "stockfish", config.StockfishPath, "Stockfish executable path")
+	flags.IntVar(&config.Depth, "depth", config.Depth, "search depth")
+	flags.IntVar(&config.Threads, "threads", config.Threads, "Stockfish threads")
+	flags.IntVar(&config.HashMB, "hash-mb", config.HashMB, "Stockfish hash size in MB")
+	flags.BoolVar(&config.NoColor, "no-color", false, "disable terminal colors")
+	flags.StringVar(&config.Theme, "theme", config.Theme, "board theme (classic|midnight|forest)")
+	flags.StringVar(&config.Pieces, "pieces", config.Pieces, "piece style (unicode|letters)")
 
 	if err := flags.Parse(args); err != nil {
 		return config, err
@@ -74,21 +55,19 @@ func parseConfig(args []string) (Config, error) {
 	if flags.NArg() > 0 {
 		return config, fmt.Errorf("unexpected argument %q; run chess-cli -h for usage", flags.Arg(0))
 	}
-
-	provided := make(map[string]bool)
-	flags.Visit(func(option *flag.Flag) { provided[option.Name] = true })
-	if depthEnvErr != nil && !provided["depth"] {
-		return config, depthEnvErr
-	}
-	if threadsEnvErr != nil && !provided["threads"] {
-		return config, threadsEnvErr
-	}
-	if hashEnvErr != nil && !provided["hash-mb"] {
-		return config, hashEnvErr
-	}
 	if config.Depth < 1 || config.Threads < 1 || config.HashMB < 1 {
 		return config, errors.New("depth, threads, and hash-mb must be positive integers")
 	}
+	themeName, err := normalizeEnum("theme", config.Theme, themeNames)
+	if err != nil {
+		return config, err
+	}
+	config.Theme = themeName
+	pieceStyle, err := normalizePieceStyle(config.Pieces)
+	if err != nil {
+		return config, err
+	}
+	config.Pieces = pieceStyle
 	return config, nil
 }
 
@@ -108,6 +87,10 @@ COMMANDS
   undo               Undo the last turn
   save / load        Save to or load from game.pgn
   new [white|black]  Start a new game
+  theme [classic|midnight|forest]
+                     Change the board theme
+  pieces [unicode|letters]
+                     Change how pieces are displayed
   resign             Resign the game
   fen                Print the current FEN
   quit               Exit
@@ -181,6 +164,11 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(2)
 	}
+	theme, err := LoadTheme(config.Theme)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(2)
+	}
 	SetColorsEnabled(!config.NoColor)
 
 	stockfish, err := StartStockfish(config.StockfishPath, config.Threads, config.HashMB)
@@ -191,6 +179,8 @@ func main() {
 	defer stockfish.Close()
 
 	depth := config.Depth
+	pieceStyle := config.Pieces
+	themeName := config.Theme
 
 	reader := bufio.NewScanner(os.Stdin)
 	reader.Buffer(make([]byte, 4096), 1024*1024)
@@ -217,15 +207,7 @@ func main() {
 		}
 
 		ClearScreen()
-		RenderBoard(fen, playerColor)
-		ShowMoves(history)
-		if notice != "" {
-			fmt.Println("\n" + notice)
-		}
-		if result != "*" {
-			fmt.Println("\nGame result:", result)
-			fmt.Println("Type 'new' to play again, 'save' to write game.pgn, or 'quit'.")
-		}
+		RenderGame(fen, playerColor, history, depth, notice, result, pieceStyle, theme, TerminalWidth())
 
 		fmt.Print("\n> ")
 		if !reader.Scan() {
@@ -250,6 +232,41 @@ func main() {
 			continue
 		case "fen":
 			notice = fen
+			continue
+		case "theme":
+			if len(fields) == 1 {
+				notice = "Theme: " + themeName
+				continue
+			}
+			if len(fields) != 2 {
+				notice = "Usage: theme [classic|midnight|forest]"
+				continue
+			}
+			themeArg := strings.ToLower(fields[1])
+			newTheme, themeErr := LoadTheme(themeArg)
+			if themeErr != nil {
+				notice = themeErr.Error()
+			} else {
+				theme, themeName = newTheme, themeArg
+				notice = "Theme set to " + themeName + "."
+			}
+			continue
+		case "pieces":
+			if len(fields) == 1 {
+				notice = "Piece style: " + pieceStyle
+				continue
+			}
+			if len(fields) != 2 {
+				notice = "Usage: pieces [unicode|letters]"
+				continue
+			}
+			newStyle, styleErr := normalizePieceStyle(fields[1])
+			if styleErr != nil {
+				notice = styleErr.Error()
+				continue
+			}
+			pieceStyle = newStyle
+			notice = "Piece style set to " + pieceStyle + "."
 			continue
 		case "depth":
 			if len(fields) == 1 {

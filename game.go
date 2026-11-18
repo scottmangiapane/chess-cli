@@ -12,51 +12,80 @@ type Move struct {
 	After  string
 }
 
-func ShowMoves(history []Move) {
+func PanelLines(playerColor string, history []Move, depth int, notice, result string, theme Theme, width int) []string {
+	if width < 12 {
+		width = 12
+	}
+	colorName := "White"
+	if playerColor == "b" {
+		colorName = "Black"
+	}
+	lines := []string{
+		PaintText("YOU: "+colorName, theme.Text),
+		PaintText(fmt.Sprintf("STOCKFISH · DEPTH %d", depth), theme.Muted),
+		"",
+		PaintText("MOVES", theme.Accent),
+	}
+
 	if len(history) == 0 {
-		return
+		lines = append(lines, PaintText("No moves yet", theme.Muted))
+	} else {
+		first := ((len(history)+1)/2 - 4) * 2
+		if first < 0 {
+			first = 0
+		}
+		if first > 0 {
+			lines = append(lines, PaintText(fmt.Sprintf("… %d earlier moves", first/2), theme.Muted))
+		}
+		for i := first; i < len(history); i += 2 {
+			moveLine := fmt.Sprintf("%d. %s", i/2+1, history[i].SAN)
+			if i+1 < len(history) {
+				moveLine += "  " + history[i+1].SAN
+			}
+			lines = append(lines, wrapText(moveLine, width)...)
+		}
 	}
 
-	// Keep the live display compact; the complete game remains in history
-	// and is included when saving the PGN.
-	first := ((len(history)+1)/2 - 4) * 2
-	if first < 0 {
-		first = 0
+	if result != "*" {
+		lines = append(lines, "", PaintText("RESULT: "+result, theme.Accent))
 	}
-	if first > 0 {
-		earlier := first / 2
-		label := "moves"
-		if earlier == 1 {
-			label = "move"
-		}
-		fmt.Printf("… %d earlier %s\n", earlier, label)
+	if notice != "" {
+		lines = append(lines, "")
+		lines = append(lines, wrapText(notice, width)...)
 	}
+	return lines
+}
 
-	for i := first; i < len(history); i += 2 {
-		fmt.Printf("%d. %s", i/2+1, history[i].SAN)
-		if i+1 < len(history) {
-			fmt.Printf(" %s", history[i+1].SAN)
-		}
-		fmt.Println()
+func wrapText(text string, width int) []string {
+	words := strings.Fields(text)
+	if len(words) == 0 {
+		return nil
 	}
+	var lines []string
+	line := words[0]
+	for _, word := range words[1:] {
+		if len(line)+1+len(word) > width {
+			lines = append(lines, line)
+			line = word
+		} else {
+			line += " " + word
+		}
+	}
+	return append(lines, line)
 }
 
 // AddCheckSuffix adds + or # based on the resulting position.
 func AddCheckSuffix(stockfish *Stockfish, fen, san, checkers string) (string, error) {
-	if strings.TrimSpace(checkers) == "" ||
-		strings.TrimSpace(checkers) == "(none)" {
+	if strings.TrimSpace(checkers) == "" || strings.TrimSpace(checkers) == "(none)" {
 		return san, nil
 	}
-
 	legal, err := stockfish.LegalMoves(fen)
 	if err != nil {
 		return "", err
 	}
-
 	if len(legal) == 0 {
 		return san + "#", nil
 	}
-
 	return san + "+", nil
 }
 
@@ -67,28 +96,21 @@ func GameStatus(stockfish *Stockfish, fen string) (string, string, error) {
 	if err != nil {
 		return "*", "", err
 	}
-
 	if len(legal) > 0 {
 		return "*", "", nil
 	}
-
 	_, checkers, err := stockfish.Inspect(fen)
 	if err != nil {
 		return "*", "", err
 	}
-
 	fields := strings.Fields(fen)
 	if len(fields) < 2 {
 		return "*", "", fmt.Errorf("invalid FEN: %s", fen)
 	}
-
-	inCheck := strings.TrimSpace(checkers) != "" &&
-		strings.TrimSpace(checkers) != "(none)"
-
+	inCheck := strings.TrimSpace(checkers) != "" && strings.TrimSpace(checkers) != "(none)"
 	if !inCheck {
 		return "1/2-1/2", "Draw by stalemate.", nil
 	}
-
 	if fields[1] == "w" {
 		return "0-1", "Checkmate. Black wins.", nil
 	}
@@ -99,16 +121,10 @@ func Undo(history []Move, fen, playerColor string) ([]Move, string, bool) {
 	if len(history) == 0 {
 		return history, fen, false
 	}
-
-	// Moves alternate starting with White. At the player's turn, undo the
-	// player's previous move and Stockfish's reply. If the game ended on
-	// the player's move, undo just that move. A Black player cannot undo
-	// before making a move because only Stockfish's opening move exists.
 	lastMoveColor := "w"
 	if (len(history)-1)%2 == 1 {
 		lastMoveColor = "b"
 	}
-
 	remove := 1
 	if lastMoveColor != playerColor {
 		if len(history) < 2 {
@@ -123,7 +139,6 @@ func Undo(history []Move, fen, playerColor string) ([]Move, string, bool) {
 		}
 		remove = 2
 	}
-
 	fen = history[len(history)-remove].Before
 	history = history[:len(history)-remove]
 	return history, fen, true
