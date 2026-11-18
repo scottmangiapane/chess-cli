@@ -2,6 +2,10 @@
 
 A small terminal chess client for playing against [Stockfish](https://stockfishchess.org/).
 
+## Demo
+
+![demo](/demo.svg)
+
 ## Requirements
 
 Go 1.19+ and Stockfish on `PATH`.
