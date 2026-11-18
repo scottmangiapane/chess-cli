@@ -85,7 +85,6 @@ func PieceGlyph(piece rune) string {
 
 func RenderBoard(fen, playerColor string) {
 	board, turn, _ := ParseBoard(fen)
-
 	fields := strings.Fields(fen)
 	moveNumber := "1"
 	if len(fields) >= 6 {
@@ -93,60 +92,32 @@ func RenderBoard(fen, playerColor string) {
 	}
 
 	flipped := playerColor == "b"
-	fmt.Print("    ")
-	for col := 0; col < 8; col++ {
-		file := col
-		if flipped {
-			file = 7 - col
-		}
-		fmt.Printf("%c   ", 'a'+file)
+	turnName := "White"
+	if turn == "b" {
+		turnName = "Black"
 	}
-	fmt.Println()
-	fmt.Println("  ┌───┬───┬───┬───┬───┬───┬───┬───┐")
+	fmt.Printf("%s. %s to move\n", moveNumber, turnName)
+	files := "a b c d e f g h"
+	if flipped {
+		files = "h g f e d c b a"
+	}
+	fmt.Println("  " + files)
 
 	for row := 0; row < 8; row++ {
 		boardRow := row
 		if flipped {
 			boardRow = 7 - row
 		}
-		rank := 8 - boardRow
-		if row > 0 {
-			fmt.Println("  ├───┼───┼───┼───┼───┼───┼───┼───┤")
-		}
-
-		fmt.Printf("%d │", rank)
+		fmt.Print(8 - boardRow)
 		for col := 0; col < 8; col++ {
 			boardCol := col
 			if flipped {
 				boardCol = 7 - col
 			}
-			fmt.Printf(" %s │", PieceGlyph(board[boardRow][boardCol]))
-		}
-		fmt.Printf(" %d", rank)
-
-		switch row {
-		case 3:
-			if turn == "w" {
-				fmt.Print("   White to move")
-			} else {
-				fmt.Print("   Black to move")
-			}
-		case 4:
-			fmt.Printf("   Move #%s", moveNumber)
+			fmt.Printf(" %s", PieceGlyph(board[boardRow][boardCol]))
 		}
 		fmt.Println()
 	}
-
-	fmt.Println("  └───┴───┴───┴───┴───┴───┴───┴───┘")
-	fmt.Print("    ")
-	for col := 0; col < 8; col++ {
-		file := col
-		if flipped {
-			file = 7 - col
-		}
-		fmt.Printf("%c   ", 'a'+file)
-	}
-	fmt.Println()
 }
 
 func ClearScreen() {

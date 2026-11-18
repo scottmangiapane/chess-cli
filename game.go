@@ -13,15 +13,27 @@ type Move struct {
 }
 
 func ShowMoves(history []Move) {
-	fmt.Println("\nMoves")
-
 	if len(history) == 0 {
-		fmt.Println("  (none yet)")
 		return
 	}
 
-	for i := 0; i < len(history); i += 2 {
-		fmt.Printf("%3d. %-8s", i/2+1, history[i].SAN)
+	// Keep the live display compact; the complete game remains in history
+	// and is included when saving the PGN.
+	first := ((len(history)+1)/2 - 4) * 2
+	if first < 0 {
+		first = 0
+	}
+	if first > 0 {
+		earlier := first / 2
+		label := "moves"
+		if earlier == 1 {
+			label = "move"
+		}
+		fmt.Printf("… %d earlier %s\n", earlier, label)
+	}
+
+	for i := first; i < len(history); i += 2 {
+		fmt.Printf("%d. %s", i/2+1, history[i].SAN)
 		if i+1 < len(history) {
 			fmt.Printf(" %s", history[i+1].SAN)
 		}

@@ -13,6 +13,5 @@ func color(code, text string) string {
 	return "\033[" + code + "m" + text + "\033[0m"
 }
 
-func Bold(text string) string   { return color("1", text) }
 func Yellow(text string) string { return color("33", text) }
 func Blue(text string) string   { return color("34", text) }

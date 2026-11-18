@@ -94,14 +94,17 @@ func parseConfig(args []string) (Config, error) {
 
 func printHelp() {
 	fmt.Print(`
+chess-cli — play chess against Stockfish.
+You play White by default; use "new black" to play Black.
+
 MOVES
-  e4, Nf3, Bxc6+, O-O, O-O-O, e8=Q
-  Coordinate moves also work: e2e4, e7e8q
+  e4, Nf3, Bxc6+, O-O, e8=Q
+  Coordinates also work: e2e4, e7e8q
 
 COMMANDS
   help               Show help
   hint               Suggest a move
-  depth N            Change search depth
+  depth [N]          Show or change search depth
   undo               Undo the last turn
   save / load        Save to or load from game.pgn
   new [white|black]  Start a new game
@@ -115,23 +118,6 @@ func pause(reader *bufio.Scanner) {
 	fmt.Print("\nPress Enter to continue...")
 	if reader.Scan() {
 		// Consume the pause input.
-	}
-}
-
-func choosePlayerColor(reader *bufio.Scanner) (string, bool) {
-	for {
-		fmt.Print("Choose your side (white/black) [white]: ")
-		if !reader.Scan() {
-			return "w", false
-		}
-		switch strings.ToLower(strings.TrimSpace(reader.Text())) {
-		case "", "w", "white":
-			return "w", true
-		case "b", "black":
-			return "b", true
-		default:
-			fmt.Println("Please enter 'white' or 'black'.")
-		}
 	}
 }
 
@@ -205,23 +191,15 @@ func main() {
 	defer stockfish.Close()
 
 	depth := config.Depth
-	threads := config.Threads
-	hashMB := config.HashMB
 
 	reader := bufio.NewScanner(os.Stdin)
 	reader.Buffer(make([]byte, 4096), 1024*1024)
-	playerColor, ok := choosePlayerColor(reader)
-	if !ok {
-		return
-	}
+	playerColor := "w"
 
 	fen := InitialFEN
 	var history []Move
 	result := "*"
-	notice := "You are White. Stockfish plays Black."
-	if playerColor == "b" {
-		notice = "You are Black. Stockfish will make the first move."
-	}
+	notice := ""
 
 	for {
 		// Stockfish moves whenever it is Stockfish's turn. This handles
@@ -239,14 +217,6 @@ func main() {
 		}
 
 		ClearScreen()
-		fmt.Println(Bold("CHESS-CLI") + "  |  SAN notation")
-		playerName := "White"
-		if playerColor == "b" {
-			playerName = "Black"
-		}
-		fmt.Printf("You: %s  |  Depth %d  |  Threads %d  |  Hash %d MB\n\n",
-			playerName, depth, threads, hashMB)
-
 		RenderBoard(fen, playerColor)
 		ShowMoves(history)
 		if notice != "" {
@@ -255,8 +225,6 @@ func main() {
 		if result != "*" {
 			fmt.Println("\nGame result:", result)
 			fmt.Println("Type 'new' to play again, 'save' to write game.pgn, or 'quit'.")
-		} else {
-			fmt.Println("\nEnter a move or type help.")
 		}
 
 		fmt.Print("\n> ")
@@ -284,8 +252,12 @@ func main() {
 			notice = fen
 			continue
 		case "depth":
+			if len(fields) == 1 {
+				notice = fmt.Sprintf("Search depth: %d.", depth)
+				continue
+			}
 			if len(fields) != 2 {
-				notice = "Usage: depth 12"
+				notice = "Usage: depth [N]"
 				continue
 			}
 			n, err := strconv.Atoi(fields[1])

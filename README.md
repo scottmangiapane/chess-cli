@@ -13,7 +13,7 @@ go build -o chess-cli .
 ./chess-cli
 ```
 
-Choose a side when prompted. Run `./chess-cli -h` to see configuration options. Each option can also be set with its matching environment variable; command-line flags take precedence.
+You start as White. Enter `new black` at the prompt to start a game as Black. Run `./chess-cli -h` to see configuration options. Each option can also be set with its matching environment variable; command-line flags take precedence.
 
 | Flag | Environment variable | Default |
 |---|---|---|
@@ -27,4 +27,4 @@ For example: `./chess-cli -stockfish /path/to/stockfish -depth 12 -threads 4 -ha
 
 ## Play
 
-Enter moves in SAN (`e4`, `Nf3`, `O-O`) or coordinate notation (`e2e4`). Commands: `help`, `fen`, `hint`, `depth N`, `undo`, `save`, `load`, `resign`, `new [white|black]`, and `quit`. `save` writes `game.pgn`; `load` reads it from the current directory. Loading supports standard starting positions.
+Enter moves in standard notation (`e4`, `Nf3`, `O-O`) or coordinate notation (`e2e4`). Commands: `help`, `fen`, `hint`, `depth [N]`, `undo`, `save`, `load`, `resign`, `new [white|black]`, and `quit`. `save` writes `game.pgn`; `load` reads it from the current directory. Loading supports standard starting positions.
