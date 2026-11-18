@@ -13,14 +13,14 @@ The default engine path is `/opt/homebrew/bin/stockfish` (Homebrew on Apple Sili
 ## Build
 
 ```sh
-go build -o chess-cli .
-./chess-cli
+go build -o chess .
+./chess
 ```
 
 Override the engine path or search settings with environment variables:
 
 ```sh
-ENGINE=/path/to/stockfish DEPTH=12 THREADS=4 HASH_MB=512 ./chess-cli
+ENGINE=/path/to/stockfish DEPTH=12 THREADS=4 HASH_MB=512 ./chess
 ```
 
 Disable terminal colors with `NO_COLOR=1`.
