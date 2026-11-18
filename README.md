@@ -35,4 +35,4 @@ Example: `./chess-cli -theme midnight -pieces letters -depth 12`.
 
 Enter moves in chess notation (`e4`, `Nf3`, `O-O`) or coordinate notation (`e2e4`). Commands: `help`, `fen`, `hint`, `depth [N]`, `theme [NAME]`, `pieces [unicode|letters]`, `undo`, `save`, `load`, `resign`, `new [white|black]`, and `quit`. `save` writes `game.pgn`; `load` reads it from the current directory.
 
-Built-in themes color the chessboard only; the rest of the terminal keeps its configured background. Pieces can be shown as Unicode chess glyphs or letters.
+The board supports multiple themes. Pieces can be shown as Unicode chess glyphs or letters.
