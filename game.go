@@ -2,9 +2,7 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"strings"
-	"time"
 )
 
 type Move struct {
@@ -32,18 +30,13 @@ func ShowMoves(history []Move) {
 }
 
 // AddCheckSuffix adds + or # based on the resulting position.
-func AddCheckSuffix(e *Engine, fen, san string) (string, error) {
-	_, checkers, err := e.Inspect(fen)
-	if err != nil {
-		return "", err
-	}
-
+func AddCheckSuffix(stockfish *Stockfish, fen, san, checkers string) (string, error) {
 	if strings.TrimSpace(checkers) == "" ||
 		strings.TrimSpace(checkers) == "(none)" {
 		return san, nil
 	}
 
-	legal, err := e.LegalMoves(fen)
+	legal, err := stockfish.LegalMoves(fen)
 	if err != nil {
 		return "", err
 	}
@@ -57,8 +50,8 @@ func AddCheckSuffix(e *Engine, fen, san string) (string, error) {
 
 // GameStatus returns the PGN result and a human-readable message.
 // A nonempty result other than "*" means the game has ended.
-func GameStatus(e *Engine, fen string) (string, string, error) {
-	legal, err := e.LegalMoves(fen)
+func GameStatus(stockfish *Stockfish, fen string) (string, string, error) {
+	legal, err := stockfish.LegalMoves(fen)
 	if err != nil {
 		return "*", "", err
 	}
@@ -67,7 +60,7 @@ func GameStatus(e *Engine, fen string) (string, string, error) {
 		return "*", "", nil
 	}
 
-	_, checkers, err := e.Inspect(fen)
+	_, checkers, err := stockfish.Inspect(fen)
 	if err != nil {
 		return "*", "", err
 	}
@@ -90,55 +83,36 @@ func GameStatus(e *Engine, fen string) (string, string, error) {
 	return "1-0", "Checkmate. White wins.", nil
 }
 
-func SavePGN(history []Move, result, filename string) error {
-	if result == "" {
-		result = "*"
-	}
-
-	if !strings.HasSuffix(strings.ToLower(filename), ".pgn") {
-		filename += ".pgn"
-	}
-
-	var out strings.Builder
-
-	fmt.Fprintln(&out, `[Event "Stockfish Terminal Chess"]`)
-	fmt.Fprintln(&out, `[Site "Local"]`)
-	fmt.Fprintf(&out, "[Date \"%s\"]\n", time.Now().Format("2006.01.02"))
-	fmt.Fprintln(&out, `[Round "1"]`)
-	fmt.Fprintln(&out, `[White "Player"]`)
-	fmt.Fprintln(&out, `[Black "Stockfish"]`)
-	fmt.Fprintf(&out, "[Result \"%s\"]\n\n", result)
-
-	for i, move := range history {
-		if i%2 == 0 {
-			fmt.Fprintf(&out, "%d. ", i/2+1)
-		}
-		out.WriteString(move.SAN)
-		out.WriteByte(' ')
-	}
-
-	out.WriteString(result)
-	out.WriteByte('\n')
-
-	return os.WriteFile(filename, []byte(out.String()), 0644)
-}
-
-func Undo(history []Move, fen string) ([]Move, string, bool) {
+func Undo(history []Move, fen, playerColor string) ([]Move, string, bool) {
 	if len(history) == 0 {
 		return history, fen, false
 	}
 
-	// Normally remove the human move and Stockfish's reply.
-	// If the game ended immediately after the human move, remove one.
-	n := 2
-	if len(history)%2 == 1 {
-		n = 1
-	}
-	if n > len(history) {
-		n = len(history)
+	// Moves alternate starting with White. At the player's turn, undo the
+	// player's previous move and Stockfish's reply. If the game ended on
+	// the player's move, undo just that move. A Black player cannot undo
+	// before making a move because only Stockfish's opening move exists.
+	lastMoveColor := "w"
+	if (len(history)-1)%2 == 1 {
+		lastMoveColor = "b"
 	}
 
-	fen = history[len(history)-n].Before
-	history = history[:len(history)-n]
+	remove := 1
+	if lastMoveColor != playerColor {
+		if len(history) < 2 {
+			return history, fen, false
+		}
+		previousMoveColor := "w"
+		if (len(history)-2)%2 == 1 {
+			previousMoveColor = "b"
+		}
+		if previousMoveColor != playerColor {
+			return history, fen, false
+		}
+		remove = 2
+	}
+
+	fen = history[len(history)-remove].Before
+	history = history[:len(history)-remove]
 	return history, fen, true
 }

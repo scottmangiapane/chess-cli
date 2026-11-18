@@ -1,59 +1,30 @@
+# chess-cli
 
-# Stockfish Client
-
-A dependency-free Go terminal client for [Stockfish](https://stockfishchess.org).
+A small terminal chess client. Play as White or Black against [Stockfish](https://stockfishchess.org/).
 
 ## Requirements
 
-- Go 1.19 or later
-- Stockfish installed locally
+Go 1.19+ and Stockfish on `PATH` (or set `STOCKFISH_PATH`).
 
-The default engine path is `/opt/homebrew/bin/stockfish` (Homebrew on Apple Silicon macOS).
+## Build and run
 
-## Build
-
-```sh
-go build -o chess .
-./chess
+```bash
+go build -o chess-cli .
+./chess-cli
 ```
 
-Override the engine path or search settings with environment variables:
+Choose a side when prompted. Run `./chess-cli -h` to see configuration options. Each option can also be set with its matching environment variable; command-line flags take precedence.
 
-```sh
-ENGINE=/path/to/stockfish DEPTH=12 THREADS=4 HASH_MB=512 ./chess
-```
+| Flag | Environment variable | Default |
+|---|---|---|
+| `-stockfish PATH` | `STOCKFISH_PATH` | `stockfish` on `PATH` |
+| `-depth N` | `DEPTH` | `8` |
+| `-threads N` | `THREADS` | Number of CPUs |
+| `-hash-mb N` | `HASH_MB` | `256` |
+| `-no-color` | `NO_COLOR` | Colors enabled |
 
-Disable terminal colors with `NO_COLOR=1`.
+For example: `./chess-cli -stockfish /path/to/stockfish -depth 12 -threads 4 -hash-mb 512`. Set `NO_COLOR=1` or use `-no-color` to disable colors.
 
-## Moves
+## Play
 
-Enter standard algebraic notation (SAN):
-
-- `e4` — pawn move
-- `Nf3` — knight move
-- `Bxc6+` — capture giving check
-- `O-O` / `O-O-O` — castling
-- `e8=Q` — promotion
-
-UCI coordinate moves such as `e2e4` are also accepted.
-
-## Commands
-
-- `help` — show commands
-- `board` — redraw the board
-- `moves` — display move history
-- `fen` — display the current FEN
-- `hint` — ask Stockfish for a move suggestion
-- `depth N` — change search depth
-- `undo` — take back the last turn
-- `save [file.pgn]` — export the game
-- `resign` — resign
-- `new` — start a new game
-- `quit` — exit
-
-## Implementation
-
-The Go client uses only the standard library. Stockfish handles legal move
-generation and engine search through UCI. The client formats and matches SAN,
-renders the board, maintains move history, and exports PGN.
-
+Enter moves in SAN (`e4`, `Nf3`, `O-O`) or coordinate notation (`e2e4`). Commands: `help`, `fen`, `hint`, `depth N`, `undo`, `save`, `load`, `resign`, `new [white|black]`, and `quit`. `save` writes `game.pgn`; `load` reads it from the current directory. Loading supports standard starting positions.

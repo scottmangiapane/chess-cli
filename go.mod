@@ -1,3 +1,3 @@
-module chess
+module chess-cli
 
 go 1.19

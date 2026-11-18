@@ -55,35 +55,35 @@ func Square(s string) (int, int) {
 func PieceGlyph(piece rune) string {
 	switch piece {
 	case 'K':
-		return WhiteKing
+		return Yellow("♔")
 	case 'Q':
-		return WhiteQueen
+		return Yellow("♕")
 	case 'R':
-		return WhiteRook
+		return Yellow("♖")
 	case 'B':
-		return WhiteBishop
+		return Yellow("♗")
 	case 'N':
-		return WhiteKnight
+		return Yellow("♘")
 	case 'P':
-		return WhitePawn
+		return Yellow("♙")
 	case 'k':
-		return BlackKing
+		return Blue("♚")
 	case 'q':
-		return BlackQueen
+		return Blue("♛")
 	case 'r':
-		return BlackRook
+		return Blue("♜")
 	case 'b':
-		return BlackBishop
+		return Blue("♝")
 	case 'n':
-		return BlackKnight
+		return Blue("♞")
 	case 'p':
-		return BlackPawn
+		return Blue("♟")
 	default:
 		return " "
 	}
 }
 
-func RenderBoard(fen string) {
+func RenderBoard(fen, playerColor string) {
 	board, turn, _ := ParseBoard(fen)
 
 	fields := strings.Fields(fen)
@@ -92,21 +92,39 @@ func RenderBoard(fen string) {
 		moveNumber = fields[5]
 	}
 
-	fmt.Println("    a   b   c   d   e   f   g   h")
+	flipped := playerColor == "b"
+	fmt.Print("    ")
+	for col := 0; col < 8; col++ {
+		file := col
+		if flipped {
+			file = 7 - col
+		}
+		fmt.Printf("%c   ", 'a'+file)
+	}
+	fmt.Println()
 	fmt.Println("  ┌───┬───┬───┬───┬───┬───┬───┬───┐")
 
-	for r := 0; r < 8; r++ {
-		if r > 0 {
+	for row := 0; row < 8; row++ {
+		boardRow := row
+		if flipped {
+			boardRow = 7 - row
+		}
+		rank := 8 - boardRow
+		if row > 0 {
 			fmt.Println("  ├───┼───┼───┼───┼───┼───┼───┼───┤")
 		}
 
-		fmt.Printf("%d │", 8-r)
-		for f := 0; f < 8; f++ {
-			fmt.Printf(" %s │", PieceGlyph(board[r][f]))
+		fmt.Printf("%d │", rank)
+		for col := 0; col < 8; col++ {
+			boardCol := col
+			if flipped {
+				boardCol = 7 - col
+			}
+			fmt.Printf(" %s │", PieceGlyph(board[boardRow][boardCol]))
 		}
-		fmt.Printf(" %d", 8-r)
+		fmt.Printf(" %d", rank)
 
-		switch r {
+		switch row {
 		case 3:
 			if turn == "w" {
 				fmt.Print("   White to move")
@@ -120,7 +138,15 @@ func RenderBoard(fen string) {
 	}
 
 	fmt.Println("  └───┴───┴───┴───┴───┴───┴───┴───┘")
-	fmt.Println("    a   b   c   d   e   f   g   h")
+	fmt.Print("    ")
+	for col := 0; col < 8; col++ {
+		file := col
+		if flipped {
+			file = 7 - col
+		}
+		fmt.Printf("%c   ", 'a'+file)
+	}
+	fmt.Println()
 }
 
 func ClearScreen() {
